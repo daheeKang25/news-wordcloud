@@ -65,29 +65,42 @@ def get_stop_words(keyword, word_count):
     return stop_words
 
 def generate_wordcloud(keyword, text):
+
     BASE_DIR = Path(__file__).resolve().parent
     font_path = BASE_DIR / "font" / "Moneygraphy-Pixel.ttf"
+
     kiwi = Kiwi()
     tokens = kiwi.tokenize(text)
-    nouns = [v.form for v in tokens if v.tag in ['NNG','NNP'] 
-                 and len(v.form)>=2]
-    nouns = [v for v in nouns if v not in stop_words]
+
+    nouns = [
+        v.form for v in tokens
+        if v.tag in ['NNG', 'NNP'] and len(v.form) >= 2
+    ]
     word_count = Counter(nouns)
+
+    if not word_count:
+        raise ValueError("워드클라우드를 생성할 단어가 없습니다.")
     stop_words = get_stop_words(keyword, dict(word_count)) or []
     word_count = Counter({
         word: count
         for word, count in word_count.items()
         if word not in stop_words
     })
-    wc = WordCloud(font_path=str(font_path),
-                   background_color='white', 
-                   width=1200,
-                   height=700)
+
+    if not word_count:
+        raise ValueError("불용어 제거 후 남은 단어가 없습니다.")
+    wc = WordCloud(
+        font_path=str(font_path),
+        background_color='white',
+        width=1200,
+        height=700
+    )
+
     wc.generate_from_frequencies(word_count)
-    fig = plt.figure()
+    fig = plt.figure(figsize=(12, 7))
     plt.imshow(wc)
     plt.axis('off')
-    # plt.show()
+
     return fig
 
 def make_new_text(results):
