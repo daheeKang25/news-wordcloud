@@ -60,7 +60,12 @@ def render_dashboard():
             with c1:
                 keyword = st.text_input("검색 키워드", value="드림캐쳐 컴퍼니", placeholder="기업, 인물, 기술, 정책 등")
             with c2:
-                period = st.selectbox("분석 기간", ["오늘", "최근 7일", "최근 30일"], index=1)
+                period = st.selectbox(
+                        "분석 기간",
+                        ["전체", "오늘", "최근 7일", "최근 30일"],
+                        index=0,
+                        help="전체는 날짜 제한 없이 최신 뉴스부터 최대 수집량만큼 가져옵니다."
+                    )
             with c3:
                 limit = st.selectbox("최대 수집량", [100, 200, 300], index=0, format_func=lambda x: f"{x}건")
             with c4:
