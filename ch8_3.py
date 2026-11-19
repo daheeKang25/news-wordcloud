@@ -9,8 +9,17 @@ from os import getenv
 import json
 from pathlib import Path
 
+# 로컬 환경변수 불러오기
 load_dotenv()
-key = getenv('OPENAI_API_KEY')
+
+# 로컬 환경에서는 .env 사용
+key = os.getenv("OPENAI_API_KEY")
+
+# Streamlit Cloud에서는 Secrets 우선 사용
+try:
+    key = st.secrets.get("OPENAI_API_KEY", key)
+except FileNotFoundError:
+    pass
 client = OpenAI(api_key=key)
 
 def get_stop_words(keyword, word_count):
