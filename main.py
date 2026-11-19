@@ -4,8 +4,14 @@ import streamlit as st
 import matplotlib.pyplot as plt
 
 from news_analysis import (
-    build_analysis, keyword_counts, make_network, make_wordcloud,
-    rising_keywords, timeline_data, bucket_name,
+    build_analysis,
+    keyword_counts,
+    make_network,
+    make_wordcloud,
+    rising_keywords,
+    timeline_data,
+    bucket_name,
+    granularity_for_articles,
 )
 
 
@@ -282,17 +288,34 @@ def render_dashboard():
             st.session_state.chart_nonce += 1
             st.rerun()
 
+    granularity = granularity_for_articles(
+    filtered, active_period
+    )
+    
     feed = [
         a for a in filtered
-        if (not picked_time or bucket_name(a["published_at"], active_period) == picked_time)
-        and (not picked_keyword or picked_keyword in a["terms"])
-        and (not picked_publisher or a["publisher"] == picked_publisher)
+        if (
+            not picked_time
+            or bucket_name(
+                a["published_at"],
+                active_period,
+                granularity
+            ) == picked_time
+        )
+        and (
+            not picked_keyword
+            or picked_keyword in a["terms"]
+        )
+        and (
+            not picked_publisher
+            or a["publisher"] == picked_publisher
+        )
     ]
-    feed.sort(key=lambda a: a["published_at"], reverse=True)
-    st.caption(f"현재 필터·선택에 해당하는 기사 {len(feed)}건 · AI 요약은 기사 본문이 아닌 제목·검색요약 기반임")
-    if not feed:
-        st.info("선택한 차트 포인트에 해당하는 기사가 없습니다. 차트 선택을 해제하세요.")
-        return
+    
+    feed.sort(
+        key=lambda a: a["published_at"],
+        reverse=True
+    )
 
     feed_df = pd.DataFrame([{
         "날짜": a["date"], "제목": a["title"], "언론사/출처": a["publisher"],
