@@ -85,13 +85,19 @@ def get_secret(*names: str) -> str | None:
     return None
 
 
-def cutoff_for_period(period: str) -> datetime:
+def cutoff_for_period(period: str) -> datetime | None:
     now = datetime.now(SEOUL)
+
+    if period == "전체":
+        return None
     if period == "오늘":
         return datetime.combine(now.date(), time.min, tzinfo=SEOUL)
     if period == "최근 7일":
         return now - timedelta(days=7)
-    return now - timedelta(days=30)
+    if period == "최근 30일":
+        return now - timedelta(days=30)
+
+    raise ValueError(f"알 수 없는 분석 기간: {period}")
 
 
 def clean_text(value: str) -> str:
@@ -151,7 +157,7 @@ def naver_news_search(keyword: str, period: str = "최근 7일", limit: int = 10
                 published = datetime.strptime(item["pubDate"], "%a, %d %b %Y %H:%M:%S %z").astimezone(SEOUL)
             except (KeyError, ValueError):
                 continue
-            if published < cutoff:
+            if cutoff is not None and published < cutoff:
                 reached_old = True
                 break
             url = item.get("originallink") or item.get("link") or ""
@@ -337,56 +343,180 @@ def make_network(articles: list[dict], stop_words: set[str]):
     return fig
 
 
-def bucket_name(dt: datetime, period: str) -> str:
-    return dt.strftime("%Y-%m-%d %H:00") if period == "오늘" else dt.strftime("%Y-%m-%d")
-
-
-def timeline_data(articles: list[dict], period: str) -> pd.DataFrame:
-    """빈 시간대/날짜도 0건으로 포함하고, 선행 3구간 대비 급증을 표시."""
-    now = datetime.now(SEOUL)
-    since = cutoff_for_period(period)
+def granularity_for_articles(articles, period):
     if period == "오늘":
-        current = since.replace(minute=0, second=0, microsecond=0)
-        step = timedelta(hours=1)
+        return "hour"
+
+    if period == "전체" and articles:
+        dates = [a["published_at"] for a in articles]
+
+        if max(dates) - min(dates) > timedelta(days=90):
+            return "month"
+
+    return "day"
+
+
+def bucket_name(dt, period, granularity=None):
+    unit = granularity or (
+        "hour" if period == "오늘" else "day"
+    )
+
+    if unit == "hour":
+        return dt.strftime("%Y-%m-%d %H:00")
+
+    if unit == "month":
+        return dt.strftime("%Y-%m")
+
+    return dt.strftime("%Y-%m-%d")
+
+
+def timeline_data(articles, period):
+    if not articles:
+        return pd.DataFrame(
+            columns=["구간", "기사 수", "급증"]
+        )
+
+    now = datetime.now(SEOUL)
+    unit = granularity_for_articles(articles, period)
+
+    if period == "전체":
+        oldest = min(a["published_at"] for a in articles)
+        newest = max(a["published_at"] for a in articles)
+
+        if unit == "month":
+            current = oldest.replace(
+                day=1, hour=0, minute=0,
+                second=0, microsecond=0
+            )
+            end = newest.replace(
+                day=1, hour=0, minute=0,
+                second=0, microsecond=0
+            )
+        else:
+            current = oldest.replace(
+                hour=0, minute=0,
+                second=0, microsecond=0
+            )
+            end = newest.replace(
+                hour=0, minute=0,
+                second=0, microsecond=0
+            )
+
     else:
-        current = since.replace(hour=0, minute=0, second=0, microsecond=0)
-        step = timedelta(days=1)
-    counts = Counter(bucket_name(a["published_at"], period) for a in articles)
+        since = cutoff_for_period(period)
+
+        if period == "오늘":
+            current = since.replace(
+                minute=0, second=0, microsecond=0
+            )
+        else:
+            current = since.replace(
+                hour=0, minute=0,
+                second=0, microsecond=0
+            )
+
+        end = now
+
+    counts = Counter(
+        bucket_name(a["published_at"], period, unit)
+        for a in articles
+    )
+
     rows = []
-    while current <= now:
-        label = bucket_name(current, period)
-        rows.append({"구간": label, "기사 수": counts[label]})
-        current += step
+
+    while current <= end:
+        label = bucket_name(current, period, unit)
+
+        rows.append({
+            "구간": label,
+            "기사 수": counts[label]
+        })
+
+        if unit == "month":
+            current = (
+                current.replace(day=28)
+                + timedelta(days=4)
+            ).replace(day=1)
+
+        elif unit == "hour":
+            current += timedelta(hours=1)
+
+        else:
+            current += timedelta(days=1)
+
     df = pd.DataFrame(rows)
+
     spikes = []
+
     for i, num in enumerate(df["기사 수"]):
         prev = df["기사 수"].iloc[max(0, i-3):i]
+
         if len(prev) < 3 or (prev > 0).sum() < 2:
             spikes.append(False)
+
         else:
             avg = float(prev.mean())
-            spikes.append(num >= 3 and num >= avg * 2 and num >= avg + 2)
+
+            spikes.append(
+                num >= 3
+                and num >= avg * 2
+                and num >= avg + 2
+            )
+
     df["급증"] = spikes
+
     return df
 
 
-def rising_keywords(articles: list[dict], period: str, stop_words: set[str]) -> int | None:
-    """마지막 기사 발생 구간과 선행 구간의 키워드 사용 기사 수 비교."""
+def rising_keywords(articles, period, stop_words):
     timeline = timeline_data(articles, period)
-    nonzero_indices = timeline.index[timeline["기사 수"] > 0].tolist()
+
+    nonzero_indices = timeline.index[
+        timeline["기사 수"] > 0
+    ].tolist()
+
     if len(nonzero_indices) < 4:
-        return None  # 통계적 비교에 필요한 과거 활동 구간 부족
+        return None
+
     latest = int(nonzero_indices[-1])
     previous = nonzero_indices[-4:-1]
+
     current_bucket = timeline.loc[latest, "구간"]
-    older = [timeline.loc[i, "구간"] for i in previous]
+    older = [
+        timeline.loc[i, "구간"]
+        for i in previous
+    ]
+
+    unit = granularity_for_articles(articles, period)
     count_by_bucket = {}
+
     for b in older + [current_bucket]:
-        sub = [a for a in articles if bucket_name(a["published_at"], period) == b]
-        count_by_bucket[b] = Counter(w for a in sub for w in (set(a["terms"]) - stop_words))
+        sub = [
+            a for a in articles
+            if bucket_name(
+                a["published_at"], period, unit
+            ) == b
+        ]
+
+        count_by_bucket[b] = Counter(
+            w
+            for a in sub
+            for w in (set(a["terms"]) - stop_words)
+        )
+
     rising = 0
+
     for word, count in count_by_bucket[current_bucket].items():
-        baseline = sum(count_by_bucket[b][word] for b in older) / 3
-        if count >= 3 and count >= baseline * 2 and count >= baseline + 2:
+        baseline = sum(
+            count_by_bucket[b][word]
+            for b in older
+        ) / 3
+
+        if (
+            count >= 3
+            and count >= baseline * 2
+            and count >= baseline + 2
+        ):
             rising += 1
+
     return rising
