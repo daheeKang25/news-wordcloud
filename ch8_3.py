@@ -75,9 +75,9 @@ def generate_wordcloud(keyword, text):
     word_count = Counter(nouns)
     stop_words = get_stop_words(keyword, dict(word_count)) or []
     word_count = Counter({
-    word: count
-    for word, count in word_count.items()
-    if word not in stop_words
+        word: count
+        for word, count in word_count.items()
+        if word not in stop_words
     })
     wc = WordCloud(font_path=str(font_path),
                    background_color='white', 
