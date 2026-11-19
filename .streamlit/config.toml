@@ -2,16 +2,21 @@
 enableStaticServing = true
 
 [[theme.fontFaces]]
-family = "MoneygraphyPixel"
-url = "app/static/Moneygraphy-Pixel.ttf"
+family = "NanumSquareNeo"
+url = "app/static/NanumSquareNeo-cBd.ttf"
 weight = 400
 style = "normal"
 
 [theme]
-font = "MoneygraphyPixel, sans-serif"
-headingFont = "MoneygraphyPixel, sans-serif"
-codeFont = "MoneygraphyPixel, monospace"
+font = "NanumSquareNeo, sans-serif"
+headingFont = "NanumSquareNeo, sans-serif"
+codeFont = "NanumSquareNeo, monospace"
+base = "light"
+primaryColor = "#245CE8"
+backgroundColor = "#F8FAFE"
+secondaryBackgroundColor = "#EDF2FA"
+textColor = "#14213B"
 
 [theme.sidebar]
-font = "MoneygraphyPixel, sans-serif"
-headingFont = "MoneygraphyPixel, sans-serif"
+font = "NanumSquareNeo, sans-serif"
+headingFont = "NanumSquareNeo, sans-serif"
