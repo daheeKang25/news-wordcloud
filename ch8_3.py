@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 # from os import getenv
 import json
 from pathlib import Path
+import streamlit as st 
 
 # 로컬 환경변수 불러오기
 load_dotenv()
