@@ -5,7 +5,7 @@ from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 from  openai import OpenAI
 from dotenv import load_dotenv
-from os import getenv
+import os
 import json
 from pathlib import Path
 import streamlit as st 
