@@ -71,9 +71,14 @@ def generate_wordcloud(keyword, text):
     tokens = kiwi.tokenize(text)
     nouns = [v.form for v in tokens if v.tag in ['NNG','NNP'] 
                  and len(v.form)>=2]
-    stop_words = get_stop_words(keyword, nouns)
     nouns = [v for v in nouns if v not in stop_words]
     word_count = Counter(nouns)
+    stop_words = get_stop_words(keyword, dict(word_count)) or []
+    word_count = Counter({
+    word: count
+    for word, count in word_count.items()
+    if word not in stop_words
+    })
     wc = WordCloud(font_path=str(font_path),
                    background_color='white', 
                    width=1200,
