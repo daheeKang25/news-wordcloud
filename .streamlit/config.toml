@@ -1,0 +1,17 @@
+[server]
+enableStaticServing = true
+
+[[theme.fontFaces]]
+family = "MoneygraphyPixel"
+url = "app/static/Moneygraphy-Pixel.ttf"
+weight = 400
+style = "normal"
+
+[theme]
+font = "MoneygraphyPixel, sans-serif"
+headingFont = "MoneygraphyPixel, sans-serif"
+codeFont = "MoneygraphyPixel, monospace"
+
+[theme.sidebar]
+font = "MoneygraphyPixel, sans-serif"
+headingFont = "MoneygraphyPixel, sans-serif"
