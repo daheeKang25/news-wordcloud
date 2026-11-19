@@ -5,7 +5,7 @@ from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 from  openai import OpenAI
 from dotenv import load_dotenv
-# from os import getenv
+from os import getenv
 import json
 from pathlib import Path
 import streamlit as st 
@@ -14,7 +14,7 @@ import streamlit as st
 load_dotenv()
 
 # 로컬 환경에서는 .env 사용
-# key = os.getenv("OPENAI_API_KEY")
+key = os.getenv("OPENAI_API_KEY")
 
 # Streamlit Cloud에서는 Secrets 우선 사용
 try:
