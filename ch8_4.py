@@ -35,7 +35,13 @@ def main():
         st.dataframe(
             df,
             hide_index=True,
-            width='stretch'
+            width='stretch',
+            column_config={
+                '링크':st.column_config.LinkColumn(
+                    '기사 원문',
+                    display_text='기사 열기'
+                )
+            }
         )
         st.subheader('뉴스 워드클라우드')
         st.pyplot(st.session_state.fig, width=1200)
